@@ -8,7 +8,6 @@ export function getClientScript(port: number): string {
 
   var SERVER = 'http://localhost:${port}';
 
-  // Prevent double injection
   if (window.__yumyum_pickr__) return;
   window.__yumyum_pickr__ = true;
 
@@ -33,7 +32,7 @@ export function getClientScript(port: number): string {
     '#__yyp_overlay__{',
       'position:fixed;pointer-events:none;z-index:2147483646;',
       'border:2px solid #6366f1;background:rgba(99,102,241,.1);',
-      'border-radius:3px;display:none;box-sizing:border-box;transition:all .05s;',
+      'border-radius:3px;display:none;box-sizing:border-box;',
     '}',
     '#__yyp_label__{',
       'position:fixed;pointer-events:none;z-index:2147483647;',
@@ -46,16 +45,12 @@ export function getClientScript(port: number): string {
       'background:#10b981;color:#fff;font-family:system-ui,sans-serif;font-size:13px;',
       'padding:10px 16px;border-radius:10px;display:none;',
       'box-shadow:0 4px 20px rgba(16,185,129,.35);',
-      'animation:yyp-in .2s ease;',
     '}',
-    '@keyframes yyp-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}',
-    'body.yyp-picking *{cursor:crosshair!important;}',
+    'body.yyp-picking,body.yyp-picking *{cursor:crosshair!important;}',
   ].join('');
   document.head.appendChild(style);
 
   /* ── DOM ─────────────────────────────────────────────────────── */
-  function el(id) { return document.getElementById(id); }
-
   var bar = document.createElement('div');
   bar.id = '__yyp_bar__';
   bar.innerHTML = '<span id="__yyp_icon__">🎯</span><span id="__yyp_label_text__">Pick Element</span>';
@@ -83,23 +78,19 @@ export function getClientScript(port: number): string {
   }
 
   function isOurs(node) {
-    return node && (
-      node.id === '__yyp_bar__' ||
+    if (!node || !node.id) return false;
+    return node.id === '__yyp_bar__' ||
       node.id === '__yyp_overlay__' ||
       node.id === '__yyp_label__' ||
       node.id === '__yyp_toast__' ||
-      (node.closest && node.closest('#__yyp_bar__'))
-    );
+      !!(node.closest && node.closest('#__yyp_bar__'));
   }
 
   function getCssSelector(el) {
     var parts = [];
     var cur = el;
     while (cur && cur !== document.documentElement) {
-      if (cur.id) {
-        parts.unshift('#' + cur.id);
-        break;
-      }
+      if (cur.id) { parts.unshift('#' + cur.id); break; }
       var tag = cur.tagName.toLowerCase();
       var cls = Array.from(cur.classList)
         .filter(function (c) { return !c.startsWith('yyp-'); })
@@ -137,14 +128,41 @@ export function getClientScript(port: number): string {
     return tag + id + cls;
   }
 
+  /* ── Overlay update ──────────────────────────────────────────── */
+  // Uses elementFromPoint so it works correctly at any scroll position.
+  // Sets individual style properties (no cssText +=) to avoid accumulation.
+  function updateOverlay(clientX, clientY) {
+    // Temporarily hide overlay so elementFromPoint hits the real element
+    overlay.style.display = 'none';
+
+    var t = document.elementFromPoint(clientX, clientY);
+    if (!t || isOurs(t) || t === document.body || t === document.documentElement) return;
+
+    lastTarget = t;
+    var r = t.getBoundingClientRect();
+
+    // position:fixed → viewport coords directly, no scroll offset needed
+    overlay.style.display = 'block';
+    overlay.style.top    = r.top + 'px';
+    overlay.style.left   = r.left + 'px';
+    overlay.style.width  = r.width + 'px';
+    overlay.style.height = r.height + 'px';
+
+    label.textContent    = getLabelText(t);
+    label.style.display  = 'block';
+    var labelTop = r.top - 26;
+    label.style.top  = (labelTop < 4 ? r.bottom + 4 : labelTop) + 'px';
+    label.style.left = r.left + 'px';
+  }
+
   /* ── Picker Mode ─────────────────────────────────────────────── */
   function activate() {
     pickerActive = true;
     bar.classList.add('yyp-on');
     document.body.classList.add('yyp-picking');
-    el('__yyp_icon__').textContent = '✕';
-    el('__yyp_label_text__').textContent = 'Cancel (ESC)';
-    document.addEventListener('mouseover', onHover, true);
+    document.getElementById('__yyp_icon__').textContent = '✕';
+    document.getElementById('__yyp_label_text__').textContent = 'Cancel (ESC)';
+    document.addEventListener('mousemove', onMouseMove, true);
     document.addEventListener('click', onClick, true);
   }
 
@@ -152,43 +170,25 @@ export function getClientScript(port: number): string {
     pickerActive = false;
     bar.classList.remove('yyp-on');
     document.body.classList.remove('yyp-picking');
-    el('__yyp_icon__').textContent = '🎯';
-    el('__yyp_label_text__').textContent = 'Pick Element';
+    document.getElementById('__yyp_icon__').textContent = '🎯';
+    document.getElementById('__yyp_label_text__').textContent = 'Pick Element';
     overlay.style.display = 'none';
-    label.style.display = 'none';
-    document.removeEventListener('mouseover', onHover, true);
+    label.style.display   = 'none';
+    lastTarget = null;
+    document.removeEventListener('mousemove', onMouseMove, true);
     document.removeEventListener('click', onClick, true);
   }
 
-  function onHover(e) {
-    var t = e.target;
-    if (isOurs(t)) return;
-    lastTarget = t;
-
-    var r = t.getBoundingClientRect();
-    // overlay is position:fixed → viewport coords only, no scroll offset
-    overlay.style.cssText += [
-      ';display:block',
-      ';top:' + r.top + 'px',
-      ';left:' + r.left + 'px',
-      ';width:' + r.width + 'px',
-      ';height:' + r.height + 'px',
-    ].join('');
-
-    var labelText = getLabelText(t);
-    label.textContent = labelText;
-    label.style.display = 'block';
-    var labelTop = r.top - 26;
-    label.style.top = (labelTop < 0 ? r.bottom + 4 : labelTop) + 'px';
-    label.style.left = r.left + 'px';
+  function onMouseMove(e) {
+    updateOverlay(e.clientX, e.clientY);
   }
 
   function onClick(e) {
-    if (isOurs(e.target)) return;
+    var t = lastTarget || e.target;
+    if (isOurs(t)) return;
     e.preventDefault();
     e.stopImmediatePropagation();
 
-    var t = e.target;
     var payload = {
       tag: t.tagName.toLowerCase(),
       id: t.id || null,
@@ -206,12 +206,9 @@ export function getClientScript(port: number): string {
       body: JSON.stringify(payload),
       mode: 'cors',
     })
-    .then(function (r) {
-      if (r.ok) {
-        showToast('✓ Element captured — use get_selected_element in AI chat');
-      } else {
-        showToast('✗ Server error', '#ef4444');
-      }
+    .then(function (res) {
+      if (res.ok) showToast('✓ Element captured — use get_selected_element in AI chat');
+      else showToast('✗ Server error', '#ef4444');
     })
     .catch(function () {
       showToast('✗ Cannot reach yumyum_pickr server (port ${port})', '#ef4444');
@@ -227,7 +224,10 @@ export function getClientScript(port: number): string {
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && pickerActive) deactivate();
-    if ((e.altKey || e.metaKey) && e.key === 'p') { e.preventDefault(); pickerActive ? deactivate() : activate(); }
+    if ((e.altKey || e.metaKey) && e.key === 'p') {
+      e.preventDefault();
+      pickerActive ? deactivate() : activate();
+    }
   });
 
   console.log('[yumyum_pickr] Loaded. Click 🎯 or press Alt+P to pick an element.');
