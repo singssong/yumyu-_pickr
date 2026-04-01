@@ -12,7 +12,9 @@ export function getClientScript(port: number): string {
   window.__yumyum_pickr__ = true;
 
   var pickerActive = false;
-  var lastTarget = null;
+  var lastTarget   = null;
+  var lastOutline  = '';
+  var lastOutlineOffset = '';
 
   /* ── Styles ─────────────────────────────────────────────────── */
   var style = document.createElement('style');
@@ -28,17 +30,13 @@ export function getClientScript(port: number): string {
     '#__yyp_bar__:hover{background:#12122a;box-shadow:0 4px 40px rgba(99,102,241,.55);}',
     '#__yyp_bar__.yyp-on{background:#6366f1;border-color:#818cf8;color:#fff;}',
     '#__yyp_bar__.yyp-on:hover{background:#4f46e5;}',
-    '#__yyp_icon__{font-size:16px;line-height:1;}',
-    '#__yyp_overlay__{',
-      'position:fixed;pointer-events:none;z-index:2147483646;',
-      'border:2px solid #6366f1;background:rgba(99,102,241,.1);',
-      'border-radius:3px;display:none;box-sizing:border-box;',
-    '}',
+    /* Label follows the cursor — no element coordinate math needed */
     '#__yyp_label__{',
       'position:fixed;pointer-events:none;z-index:2147483647;',
       'background:#6366f1;color:#fff;font-family:monospace;font-size:11px;',
       'padding:3px 8px;border-radius:4px;display:none;',
       'max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;',
+      'transform:translate(-50%,-100%);margin-top:-6px;',
     '}',
     '#__yyp_toast__{',
       'position:fixed;bottom:74px;right:20px;z-index:2147483647;',
@@ -55,10 +53,6 @@ export function getClientScript(port: number): string {
   bar.id = '__yyp_bar__';
   bar.innerHTML = '<span id="__yyp_icon__">🎯</span><span id="__yyp_label_text__">Pick Element</span>';
   document.body.appendChild(bar);
-
-  var overlay = document.createElement('div');
-  overlay.id = '__yyp_overlay__';
-  document.body.appendChild(overlay);
 
   var label = document.createElement('div');
   label.id = '__yyp_label__';
@@ -78,11 +72,9 @@ export function getClientScript(port: number): string {
   }
 
   function isOurs(node) {
-    if (!node || !node.id) return false;
-    return node.id === '__yyp_bar__' ||
-      node.id === '__yyp_overlay__' ||
-      node.id === '__yyp_label__' ||
-      node.id === '__yyp_toast__' ||
+    if (!node) return false;
+    var id = node.id || '';
+    return id === '__yyp_bar__' || id === '__yyp_label__' || id === '__yyp_toast__' ||
       !!(node.closest && node.closest('#__yyp_bar__'));
   }
 
@@ -92,9 +84,7 @@ export function getClientScript(port: number): string {
     while (cur && cur !== document.documentElement) {
       if (cur.id) { parts.unshift('#' + cur.id); break; }
       var tag = cur.tagName.toLowerCase();
-      var cls = Array.from(cur.classList)
-        .filter(function (c) { return !c.startsWith('yyp-'); })
-        .slice(0, 3);
+      var cls = Array.from(cur.classList).slice(0, 3);
       var sel = tag + (cls.length ? '.' + cls.join('.') : '');
       var parent = cur.parentElement;
       if (parent) {
@@ -119,40 +109,37 @@ export function getClientScript(port: number): string {
 
   function getLabelText(el) {
     var tag = el.tagName.toLowerCase();
-    var id = el.id ? '#' + el.id : '';
-    var cls = Array.from(el.classList)
-      .filter(function (c) { return !c.startsWith('yyp-'); })
-      .slice(0, 2)
-      .map(function (c) { return '.' + c; })
-      .join('');
+    var id  = el.id ? '#' + el.id : '';
+    var cls = Array.from(el.classList).slice(0, 2).map(function (c) { return '.' + c; }).join('');
     return tag + id + cls;
   }
 
-  /* ── Overlay update ──────────────────────────────────────────── */
-  // Uses elementFromPoint so it works correctly at any scroll position.
-  // Sets individual style properties (no cssText +=) to avoid accumulation.
-  function updateOverlay(clientX, clientY) {
-    // Temporarily hide overlay so elementFromPoint hits the real element
-    overlay.style.display = 'none';
+  /* ── Highlight: outline on the element itself ────────────────
+     No coordinate math — the browser renders it in exactly the
+     right place regardless of scroll or CSS transforms.          */
+  function applyHighlight(t) {
+    if (lastTarget === t) return;
 
-    var t = document.elementFromPoint(clientX, clientY);
-    if (!t || isOurs(t) || t === document.body || t === document.documentElement) return;
+    // Restore previous element
+    if (lastTarget) {
+      lastTarget.style.outline      = lastOutline;
+      lastTarget.style.outlineOffset = lastOutlineOffset;
+    }
 
-    lastTarget = t;
-    var r = t.getBoundingClientRect();
+    lastOutline       = t.style.outline;
+    lastOutlineOffset = t.style.outlineOffset;
+    lastTarget        = t;
 
-    // position:fixed → viewport coords directly, no scroll offset needed
-    overlay.style.display = 'block';
-    overlay.style.top    = r.top + 'px';
-    overlay.style.left   = r.left + 'px';
-    overlay.style.width  = r.width + 'px';
-    overlay.style.height = r.height + 'px';
+    t.style.outline      = '2px solid #6366f1';
+    t.style.outlineOffset = '2px';
+  }
 
-    label.textContent    = getLabelText(t);
-    label.style.display  = 'block';
-    var labelTop = r.top - 26;
-    label.style.top  = (labelTop < 4 ? r.bottom + 4 : labelTop) + 'px';
-    label.style.left = r.left + 'px';
+  function clearHighlight() {
+    if (lastTarget) {
+      lastTarget.style.outline       = lastOutline;
+      lastTarget.style.outlineOffset = lastOutlineOffset;
+    }
+    lastTarget = null;
   }
 
   /* ── Picker Mode ─────────────────────────────────────────────── */
@@ -163,7 +150,7 @@ export function getClientScript(port: number): string {
     document.getElementById('__yyp_icon__').textContent = '✕';
     document.getElementById('__yyp_label_text__').textContent = 'Cancel (ESC)';
     document.addEventListener('mousemove', onMouseMove, true);
-    document.addEventListener('click', onClick, true);
+    document.addEventListener('click',     onClick,     true);
   }
 
   function deactivate() {
@@ -172,15 +159,25 @@ export function getClientScript(port: number): string {
     document.body.classList.remove('yyp-picking');
     document.getElementById('__yyp_icon__').textContent = '🎯';
     document.getElementById('__yyp_label_text__').textContent = 'Pick Element';
-    overlay.style.display = 'none';
-    label.style.display   = 'none';
-    lastTarget = null;
+    clearHighlight();
+    label.style.display = 'none';
     document.removeEventListener('mousemove', onMouseMove, true);
-    document.removeEventListener('click', onClick, true);
+    document.removeEventListener('click',     onClick,     true);
   }
 
   function onMouseMove(e) {
-    updateOverlay(e.clientX, e.clientY);
+    var t = document.elementFromPoint(e.clientX, e.clientY);
+    if (!t || isOurs(t) || t === document.body || t === document.documentElement) return;
+
+    applyHighlight(t);
+
+    /* Label follows cursor — position:fixed at cursor coords.
+       No element getBoundingClientRect() needed at all.        */
+    label.textContent   = getLabelText(t);
+    label.style.display = 'block';
+    label.style.left    = e.clientX + 'px';
+    var top = e.clientY - 14;
+    label.style.top     = (top < 20 ? e.clientY + 24 : top) + 'px';
   }
 
   function onClick(e) {
@@ -190,14 +187,14 @@ export function getClientScript(port: number): string {
     e.stopImmediatePropagation();
 
     var payload = {
-      tag: t.tagName.toLowerCase(),
-      id: t.id || null,
-      classes: Array.from(t.classList).filter(function (c) { return !c.startsWith('yyp-'); }),
+      tag:      t.tagName.toLowerCase(),
+      id:       t.id || null,
+      classes:  Array.from(t.classList),
       selector: getCssSelector(t),
-      html: getCleanHtml(t),
-      innerText: (t.innerText || '').slice(0, 200),
-      url: window.location.href,
-      timestamp: Date.now(),
+      html:     getCleanHtml(t),
+      innerText:(t.innerText || '').slice(0, 200),
+      url:      window.location.href,
+      timestamp:Date.now(),
     };
 
     fetch(SERVER + '/select', {
@@ -217,7 +214,7 @@ export function getClientScript(port: number): string {
     deactivate();
   }
 
-  /* ── Events ──────────────────────────────────────────────────── */
+  /* ── Global events ───────────────────────────────────────────── */
   bar.addEventListener('click', function () {
     pickerActive ? deactivate() : activate();
   });
