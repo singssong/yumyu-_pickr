@@ -186,6 +186,12 @@ export function getClientScript(port: number): string {
     e.preventDefault();
     e.stopImmediatePropagation();
 
+    // Remove our outline before cloning so it doesn't appear in captured HTML
+    var savedOutline       = t.style.outline;
+    var savedOutlineOffset = t.style.outlineOffset;
+    t.style.outline        = lastOutline;
+    t.style.outlineOffset  = lastOutlineOffset;
+
     var payload = {
       tag:      t.tagName.toLowerCase(),
       id:       t.id || null,
@@ -196,6 +202,10 @@ export function getClientScript(port: number): string {
       url:      window.location.href,
       timestamp:Date.now(),
     };
+
+    // Restore (deactivate will also clear, but be safe)
+    t.style.outline       = savedOutline;
+    t.style.outlineOffset = savedOutlineOffset;
 
     fetch(SERVER + '/select', {
       method: 'POST',
