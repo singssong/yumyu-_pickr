@@ -1,0 +1,51 @@
+{
+  "name": "yumyum-pickr",
+  "displayName": "yumyum_pickr",
+  "description": "Visual element picker for AI-assisted frontend development. Click any element in your browser → context auto-injected into Cursor/VSCode AI chat.",
+  "version": "0.1.0",
+  "engines": { "vscode": "^1.99.0" },
+  "categories": ["Other", "AI"],
+  "keywords": ["ai", "copilot", "element picker", "frontend", "figma"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "yumyumPickr.showSelection",
+        "title": "yumyum_pickr: Show Last Selected Element"
+      },
+      {
+        "command": "yumyumPickr.copyToClipboard",
+        "title": "yumyum_pickr: Copy Selection to Clipboard"
+      }
+    ],
+    "configuration": {
+      "title": "yumyum_pickr",
+      "properties": {
+        "yumyumPickr.port": {
+          "type": "number",
+          "default": 37799,
+          "description": "Port for the local picker server"
+        },
+        "yumyumPickr.autoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically start the picker server when VSCode opens"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "esbuild src/extension.ts --bundle --platform=node --outfile=dist/extension.js --external:vscode",
+    "watch": "npm run build -- --watch"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.99.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "yumyum_pickr": "file:../../"
+  }
+}
