@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "yumyum_pickr": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "yumyum_pickr",
+        "mcp"
+      ]
+    }
+  }
+}

@@ -207,6 +207,25 @@ export function getClientScript(port: number): string {
     t.style.outline       = savedOutline;
     t.style.outlineOffset = savedOutlineOffset;
 
+    // Build readable text for AI chat
+    var clipText = [
+      '## Selected Element',
+      '',
+      'Tag: <' + payload.tag + '>',
+      'Selector: ' + payload.selector,
+      (payload.id ? 'ID: ' + payload.id : ''),
+      (payload.classes.length ? 'Classes: ' + payload.classes.join(' ') : ''),
+      (payload.innerText ? 'Text: "' + payload.innerText + '"' : ''),
+      'URL: ' + payload.url,
+      '',
+      'HTML:',
+      payload.html,
+    ].filter(Boolean).join('\n');
+
+    // Copy to clipboard first — works in any IDE
+    navigator.clipboard.writeText(clipText).catch(function () {});
+
+    // Also send to local server for MCP / JSON file
     fetch(SERVER + '/select', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -214,11 +233,11 @@ export function getClientScript(port: number): string {
       mode: 'cors',
     })
     .then(function (res) {
-      if (res.ok) showToast('✓ Element captured — use get_selected_element in AI chat');
-      else showToast('✗ Server error', '#ef4444');
+      if (res.ok) showToast('✓ Copied! Paste into AI chat with Ctrl+V');
+      else showToast('✓ Copied! Paste into AI chat with Ctrl+V');
     })
     .catch(function () {
-      showToast('✗ Cannot reach yumyum_pickr server (port ${port})', '#ef4444');
+      showToast('✓ Copied! Paste into AI chat with Ctrl+V');
     });
 
     deactivate();

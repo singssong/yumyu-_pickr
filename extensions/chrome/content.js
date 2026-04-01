@@ -190,19 +190,37 @@
 
     t.style.outline = so; t.style.outlineOffset = soo;
 
+    // Build a clean, readable text for the AI chat
+    var clipText = [
+      '## Selected Element',
+      '',
+      'Tag: <' + payload.tag + '>',
+      'Selector: ' + payload.selector,
+      (payload.id ? 'ID: ' + payload.id : ''),
+      (payload.classes.length ? 'Classes: ' + payload.classes.join(' ') : ''),
+      (payload.innerText ? 'Text: "' + payload.innerText + '"' : ''),
+      'URL: ' + payload.url,
+      '',
+      'HTML:',
+      payload.html,
+    ].filter(Boolean).join('\n');
+
+    // Copy to clipboard — works in any IDE with Ctrl+V
+    navigator.clipboard.writeText(clipText)
+      .then(function () {
+        showToast('✓ Copied! Paste into your AI chat with Ctrl+V');
+      })
+      .catch(function () {
+        showToast('✗ Clipboard access denied', '#ef4444');
+      });
+
+    // Also try sending to local server if running (optional, non-blocking)
     fetch(SERVER + '/select', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
       mode: 'cors',
-    })
-    .then(function (res) {
-      if (res.ok) showToast('✓ Captured — check VSCode / Cursor');
-      else showToast('✗ VSCode Extension not running', '#ef4444');
-    })
-    .catch(function () {
-      showToast('✗ Start VSCode with yumyum_pickr extension', '#ef4444');
-    });
+    }).catch(function () { /* server not running — clipboard is enough */ });
 
     deactivate();
   }
