@@ -35,6 +35,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "prepare": "tsup",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
@@ -74,7 +75,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/yumyum_pickr"
+    "url": "https://github.com/singssong/yumyu-_pickr"
   },
   "files": [
     "dist",
