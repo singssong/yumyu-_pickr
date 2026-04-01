@@ -1,0 +1,83 @@
+{
+  "name": "yumyum_pickr",
+  "version": "0.1.0",
+  "description": "Visual element picker for AI-assisted frontend development. Click any element in your browser preview → context auto-injected into Cursor/VSCode AI chat.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./vite": {
+      "types": "./dist/plugins/vite.d.ts",
+      "import": "./dist/plugins/vite.js",
+      "require": "./dist/plugins/vite.cjs"
+    },
+    "./next": {
+      "types": "./dist/plugins/next.d.ts",
+      "import": "./dist/plugins/next.js",
+      "require": "./dist/plugins/next.cjs"
+    },
+    "./webpack": {
+      "types": "./dist/plugins/webpack.d.ts",
+      "import": "./dist/plugins/webpack.js",
+      "require": "./dist/plugins/webpack.cjs"
+    }
+  },
+  "bin": {
+    "yumyum_pickr": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.10.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.0.0"
+  },
+  "peerDependencies": {
+    "next": ">=13.0.0",
+    "react": ">=18.0.0",
+    "vite": ">=4.0.0",
+    "webpack": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": { "optional": true },
+    "react": { "optional": true },
+    "vite": { "optional": true },
+    "webpack": { "optional": true }
+  },
+  "keywords": [
+    "figma-make",
+    "element-picker",
+    "ai",
+    "mcp",
+    "cursor",
+    "vscode",
+    "vite-plugin",
+    "devtools",
+    "frontend"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/yumyum_pickr"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ]
+}
