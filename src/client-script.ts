@@ -166,10 +166,11 @@ export function getClientScript(port: number): string {
     lastTarget = t;
 
     var r = t.getBoundingClientRect();
+    // overlay is position:fixed → viewport coords only, no scroll offset
     overlay.style.cssText += [
       ';display:block',
-      ';top:' + (r.top + window.scrollY) + 'px',
-      ';left:' + (r.left + window.scrollX) + 'px',
+      ';top:' + r.top + 'px',
+      ';left:' + r.left + 'px',
       ';width:' + r.width + 'px',
       ';height:' + r.height + 'px',
     ].join('');
@@ -177,9 +178,9 @@ export function getClientScript(port: number): string {
     var labelText = getLabelText(t);
     label.textContent = labelText;
     label.style.display = 'block';
-    var labelTop = r.top + window.scrollY - 26;
-    label.style.top = (labelTop < 0 ? r.bottom + window.scrollY + 4 : labelTop) + 'px';
-    label.style.left = (r.left + window.scrollX) + 'px';
+    var labelTop = r.top - 26;
+    label.style.top = (labelTop < 0 ? r.bottom + 4 : labelTop) + 'px';
+    label.style.left = r.left + 'px';
   }
 
   function onClick(e) {
